@@ -27,8 +27,34 @@ class PleiadesWebInterface(Webi):
 
 
 class PleiadesPlaceCollection:
-    def __init__(self, source: str = None):
-        pass
+    def __init__(self, source: str = None, places: list = []):
+        self.places = []
+        if source:
+            raise NotImplementedError()
+        else:
+            self._source = "web"
+            self._webi = PleiadesWebInterface()
+        for place in places:
+            self.add_place(place)
+
+    def add_place(self, place: str):
+        self.places.append(PleiadesJSONPlace(place, self))
+
+    def flattened(self):
+        flats = {"type": "FeatureCollection", "features": []}
+        for p in self.places:
+            for f in p.flattened()["features"]:
+                flats["features"].append(f)
+        return flats
+
+    def get_json(self, pleiades_uri):
+        if self._source == "web":
+            r = self._webi.get(pleiades_uri + "/json")
+            if r.status_code != 200:
+                r.raise_for_status()
+            return r.json()
+        else:
+            raise NotImplementedError()
 
 
 class PleiadesJSONPlace:
@@ -104,8 +130,11 @@ class PleiadesJSONPlace:
                 ):
                     name_strings = [f"{n}?" for n in name_strings]
                 name_key = pname["nameType"]
-                if pname["end"] >= 1700:
-                    name_key = "associated_modern"
+                try:
+                    if pname["end"] >= 1700:
+                        name_key = "associated_modern"
+                except TypeError:
+                    pass
                 try:
                     names[name_key]
                 except KeyError:

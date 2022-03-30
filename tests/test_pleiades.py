@@ -8,7 +8,7 @@
 Test the pleiades_json_geo.pleiades module
 """
 import logging
-from pleiades_json_geo.pleiades import PleiadesJSONPlace
+from pleiades_json_geo.pleiades import PleiadesJSONPlace, PleiadesPlaceCollection
 from pprint import pformat
 import pytest
 
@@ -40,7 +40,31 @@ class TestPleiadesJSONPlace:
 
     def test_flat(self):
         p = PleiadesJSONPlace(place="http://pleiades.stoa.org/places/295374")
-        keys = ["placeTypes", "description", "names"]
-        f = p.flattened(keys=keys)
-        logger = logging.getLogger(self.__class__.__name__ + ".test_flat")
-        logger.debug(pformat(f["features"], indent=4))
+        f = p.flattened()
+        assert len(f["features"]) == 2
+
+
+class TestPleiadesPlaceCollection:
+    def test_web(self):
+        pids = [
+            "501355",
+            "491526",
+            "536060",
+            "481728",
+            "462097",
+            "594947",
+            "589703",
+            "589702",
+            "638755",
+            "678025",
+            "550463",
+            "638757",
+            "216706",
+            "511151",
+            "638758",
+            "639152",
+        ]
+        coll = PleiadesPlaceCollection(places=pids)
+        assert len(coll.places) == len(pids)
+        f = coll.flattened()
+        assert len(f["features"]) == 25
