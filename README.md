@@ -11,6 +11,8 @@ By [Tom Elliott](https://github.com/paregorios) for the [Institute for the Study
 - Selectively rewrite *Pleiades* extension data into the "properties" object on each contained feature so that they become available attributes in the GIS.
 - Flatten all the locations associated with an arbitrary list of *Pleiades* places into a single GeoJSON FeatureCollection.
 
+Why? The *Pleiades* JSON serialization for a Pleiades place resource is a GeoJSON FeatureCollection, wherein the Features correspond to the individual location resources associated with the place. All of the place-level data (names, connections, place types, etc.) are banged into the top-level object of the GeoJSON FeatureCollection using keys that are not part of the GeoJSON standard. QGIS naturally ignores these fields when importing. This package takes some of the "hidden" data and simplifies and rewrites it into the "properties" list inside each Feature in the FeatureCollection so that it can be accessed by QGIS.
+
 ## Install
 
 1. Create a python 3.10.3 virtual environment and activate it.
