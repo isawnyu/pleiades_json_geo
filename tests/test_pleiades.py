@@ -7,8 +7,9 @@
 """
 Test the pleiades_json_geo.pleiades module
 """
-
+import logging
 from pleiades_json_geo.pleiades import PleiadesJSONPlace
+from pprint import pformat
 import pytest
 
 
@@ -36,3 +37,10 @@ class TestPleiadesJSONPlace:
     def test_bad_place_string(self):
         with pytest.raises(ValueError):
             PleiadesJSONPlace(place="banana")
+
+    def test_flat(self):
+        p = PleiadesJSONPlace(place="http://pleiades.stoa.org/places/295374")
+        keys = ["placeTypes", "description", "names"]
+        f = p.flattened(keys=keys)
+        logger = logging.getLogger(self.__class__.__name__ + ".test_flat")
+        logger.debug(pformat(f["features"], indent=4))

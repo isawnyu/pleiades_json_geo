@@ -8,6 +8,7 @@
 Handle Pleiades JSON
 """
 from copy import deepcopy
+import json
 import logging
 import re
 from uri import URI
@@ -67,6 +68,103 @@ class PleiadesJSONPlace:
             self.pleiades_json = r.json()
         else:
             self.pleiades_json = place_collection.get_json(self.pleiades_uri)
+
+    def flattened(self):
+        """Move useful extension objects to properties on each feature."""
+        logger = logging.getLogger(self.__class__.__name__ + ".flatten")
+        flat = dict()
+        j = self.pleiades_json
+        for k in ["features", "type"]:
+            flat[k] = deepcopy(j[k])
+        for i, feature in enumerate(j["features"]):
+            ffp = flat["features"][i]["properties"]
+
+            # copy useful place information
+            crosswalk = {
+                "place_uri": "uri",
+                "place_id": "id",
+                "place_title": "title",
+                "feature_type_uris": "placeTypeURIs",
+                "place_description": "description",
+                "place_details": "details",
+            }
+            for destk, sourcek in crosswalk.items():
+                ffp[destk] = j[sourcek]
+
+            # copy useful information from names
+            names = dict()
+            for pname in j["names"]:
+                name_strings = list()
+                if pname["attested"]:
+                    name_strings.append(pname["attested"])
+                name_strings.extend([n.strip() for n in pname["romanized"].split(",")])
+                if (
+                    pname["associationCertainty"] != "certain"
+                    or pname["transcriptionAccuracy"] != "accurate"
+                ):
+                    name_strings = [f"{n}?" for n in name_strings]
+                name_key = pname["nameType"]
+                if pname["end"] >= 1700:
+                    name_key = "associated_modern"
+                try:
+                    names[name_key]
+                except KeyError:
+                    names[name_key] = set()
+                else:
+                    names[name_key].update(name_strings)
+            for k in [
+                "associated_modern",
+                "ethnic",
+                "geographic",
+                "label",
+                "unknown",
+                "undefined",
+            ]:
+                destk = f"{k}_names"
+                if k == "label":
+                    destk = "labels"
+                try:
+                    names[k]
+                except KeyError:
+                    ffp[destk] = []
+                else:
+                    ffp[destk] = list(names[k])
+
+            # copy useful properties from the "location" to feature:properties
+
+            feature_uri = feature["properties"]["link"]
+            location = [
+                l for l in self.pleiades_json["locations"] if l["uri"] == feature_uri
+            ][0]
+            crosswalk = {
+                "association_certainty_uri": "associationCertaintyURI",
+                "feature_type_uris": "featureTypeURI",
+                "archaeological_remains": "archaeologicalRemains",
+                "accuracy_meters": "accuracy_value",
+                "location_types": "locationType",
+                "start_year": "start",
+                "end_year": "end",
+            }
+            for destk, sourcek in crosswalk.items():
+                try:
+                    ffp[destk]
+                except KeyError:
+                    ffp[destk] = location[sourcek]
+                else:
+                    if isinstance(ffp[destk], list) and isinstance(
+                        location[sourcek], list
+                    ):
+                        ffp[destk].extend(location[sourcek])
+                        ffp[destk] = list(set(ffp[destk]))
+                    elif isinstance(ffp[destk], str) and isinstance(
+                        location[sourcek], str
+                    ):
+                        if ffp[destkt] != location[sourcek]:
+                            ffp[destk] = " ".join((ffp[destk], location[sourcek]))
+                    else:
+                        raise TypeError()
+
+        return flat
 
     @property
     def pleiades_uri(self):
